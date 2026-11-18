@@ -3,6 +3,7 @@
 stages:
   - test
   - build
+  - dockerize
 
 variables:
   # Cache Gradle trong thư mục project để GitLab cache lại được
@@ -47,3 +48,24 @@ build_job:
     paths:
       - build/libs/*.jar
     expire_in: 1 day
+
+# ===== STAGE 3: DOCKERIZE =====
+docker_job:
+  stage: dockerize
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    IMAGE_NAME: "$DOCKER_USERNAME/payment-service"
+  dependencies:
+    - build_job            # tải file .jar từ artifacts của build_job
+  before_script:
+    - ls -l build/libs     # kiểm tra file jar đã có
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  script:
+    - docker build -t $IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $IMAGE_NAME:latest .
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+    - docker push $IMAGE_NAME:latest
+  after_script:
+    - docker logout
