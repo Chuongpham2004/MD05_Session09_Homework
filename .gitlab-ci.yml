@@ -1,14 +1,11 @@
-# Pipeline CI cho User Service (Spring Boot + Gradle, JDK 17)
+# Pipeline CI cho dự án Quản lý nhân sự (Spring Boot + Gradle + PostgreSQL)
 
-# Image Docker chứa sẵn JDK 17 để chạy Gradle Wrapper (./gradlew)
-image: eclipse-temurin:17-jdk
-
-# stages phải là một mảng (list) YAML
 stages:
-  - build_app
+  - test
+  - build
 
 variables:
-  # Lưu cache Gradle bên trong thư mục project để GitLab có thể cache lại
+  # Cache Gradle trong thư mục project để GitLab cache lại được
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
@@ -19,15 +16,34 @@ cache:
     - .gradle/caches
 
 before_script:
-  # Đảm bảo gradlew có quyền thực thi trên Linux runner
   - chmod +x ./gradlew
-  - java -version
 
-build_job:
-  stage: build_app
+# ===== STAGE 1: TEST =====
+test_job:
+  stage: test
+  image: gradle:7.6-jdk17
+  services:
+    - name: postgres:14-alpine
+      alias: postgres
+  variables:
+    # Biến để container PostgreSQL tự tạo database và user
+    POSTGRES_DB: hr_db
+    POSTGRES_USER: hr_user
+    POSTGRES_PASSWORD: hr_password
+    # Biến để Spring Boot kết nối tới DB (host = tên alias của service)
+    SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/hr_db"
+    SPRING_DATASOURCE_USERNAME: hr_user
+    SPRING_DATASOURCE_PASSWORD: hr_password
   script:
-    - ./gradlew clean build -x test
+    - ./gradlew test
+
+# ===== STAGE 2: BUILD =====
+build_job:
+  stage: build
+  image: gradle:7.6-jdk17
+  script:
+    - ./gradlew build -x test
   artifacts:
     paths:
       - build/libs/*.jar
-    expire_in: 1 week
+    expire_in: 1 day
