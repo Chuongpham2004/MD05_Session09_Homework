@@ -1,0 +1,19 @@
+# =====================================================================
+# [ĐỐI CHỨNG - KHÔNG DÙNG CHO PRODUCTION]
+# Single-stage "Fat Container": build và chạy trong cùng một image.
+# Chỉ dùng để đo dung lượng so sánh với bai5/Dockerfile.
+#   docker build -f bai5/Dockerfile.single-stage -t payment-service:single-stage .
+# =====================================================================
+FROM gradle:7.6-jdk17
+
+WORKDIR /home/gradle/project
+
+# Copy TOÀN BỘ source code vào image
+COPY --chown=gradle:gradle . .
+
+RUN chmod +x gradlew && ./gradlew clean build -x test --no-daemon
+
+EXPOSE 8080
+
+# Image chạy vẫn chứa JDK + Gradle + src + cache Gradle
+ENTRYPOINT ["java", "-jar", "build/libs/payment-service-1.0.0.jar"]

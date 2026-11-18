@@ -1,0 +1,9 @@
+# Chỉ áp dụng cho bai5/Dockerfile (BuildKit tự nhận file <Dockerfile>.dockerignore)
+# Loại bỏ các thư mục không cần thiết khỏi build context
+.git
+.gradle
+.idea
+build
+screenshots
+bai5
+*.md
